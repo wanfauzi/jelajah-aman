@@ -1,9 +1,9 @@
 // app/index.tsx
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import RiwayatList from "../components/RiwayatList";
-import SearchBox from "../components/SearchBox";
-import WeatherCard from "../components/WeatherCard";
+import RiwayatList from "../../components/RiwayatList";
+import SearchBox from "../../components/SearchBox";
+import WeatherCard from "../../components/WeatherCard";
 
 export default function HalamanUtama() {
   const [kotaAktif, setKotaAktif] = useState("Pekalongan");
@@ -21,7 +21,7 @@ export default function HalamanUtama() {
     }
   }
   return (
-    <View style={{ padding: 16, gap: 16 }}>
+    <View style={{ paddingTop: 20, padding: 16, gap: 16 }}>
       <SearchBox onCari={handleCari} />
       <WeatherCard kota={kotaAktif} suhu={29} tingkatAQI="BAIK" />
       <RiwayatList daftarKota={riwayat} />
