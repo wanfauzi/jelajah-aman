@@ -1,5 +1,6 @@
 // src/app/(tabs)/index.tsx
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Button,
@@ -14,7 +15,12 @@ import WeatherCard from "../../components/WeatherCard";
 import { labelKodeCuaca } from "../../constants/weatherCodes";
 import { useDebounce } from "../../hooks/use-debounce";
 import { ambilKualitasUdara } from "../../services/airQualityService";
+import { ambilSemuaFavorit } from "../../services/favoritStorage";
 import { cariKota } from "../../services/geocodingService";
+import {
+  ambilKoordinatSaatIni,
+  mintaIzinLokasi,
+} from "../../services/locationService";
 import { konversiTingkatAQI } from "../../services/weatherAdapter";
 import { ambilCuaca } from "../../services/weatherService";
 import { HasilGeocoding } from "../../types/geocoding";
@@ -28,8 +34,18 @@ export default function HalamanUtama() {
   const [kualitasUdara, setKualitasUdara] = useState<DataKualitasUdara | null>(
     null,
   );
+  const [pesanLokasi, setPesanLokasi] = useState<string | null>(null);
   const [sedangMemuat, setSedangMemuat] = useState(false);
   const [pesanError, setPesanError] = useState<string | null>(null);
+  const [favoritIds, setFavoritIds] = useState<number[]>([]);
+  const sudahFavorit = kotaTerpilih
+    ? favoritIds.includes(kotaTerpilih.id)
+    : false;
+  useFocusEffect(
+    useCallback(() => {
+      ambilSemuaFavorit().then((f) => setFavoritIds(f.map((k) => k.id)));
+    }, []),
+  );
   const teksTertunda = useDebounce(teksCari, 500);
   const requestIdRef = useRef(0);
 
@@ -64,9 +80,36 @@ export default function HalamanUtama() {
     }
   }
 
+  async function gunakanLokasiSaatIni() {
+    const status = await mintaIzinLokasi();
+    if (status === "denied") {
+      setPesanLokasi(
+        "Izin lokasi ditolak. Silakan cari kota secara manual di atas.",
+      );
+      return;
+    }
+    if (status === "unavailable") {
+      setPesanLokasi(
+        "Layanan lokasi tidak aktif di perangkat ini. Silakan cari kota secara manual.",
+      );
+      return;
+    }
+    setPesanLokasi(null);
+    const koordinat = await ambilKoordinatSaatIni();
+    pilihKota({
+      id: -1,
+      name: "Lokasi Saat Ini",
+      latitude: koordinat.latitude,
+      longitude: koordinat.longitude,
+      country: "",
+    });
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, padding: 16, gap: 16 }}>
       <SearchBox onCari={setTeksCari} />
+      <Button title="Gunakan Lokasi Saat Ini" onPress={gunakanLokasiSaatIni} />
+      {pesanLokasi && <Text>{pesanLokasi}</Text>}
       {hasilPencarian.map((kota) => (
         <TouchableOpacity key={kota.id} onPress={() => pilihKota(kota)}>
           <Text>{kota.name}</Text>
@@ -88,12 +131,22 @@ export default function HalamanUtama() {
             kota={kotaTerpilih.name}
             suhu={cuaca.saatIni.suhu}
             tingkatAQI={konversiTingkatAQI(kualitasUdara.indeksAQI)}
-            indeksAQI={kualitasUdara.indeksAQI}
           />
-          <Text style={{ fontSize: 14, color: "#444" }}>
-            Suhu Hari Ini: Min {cuaca.harian.suhuMinimal[0]}°C • Maks{" "}
-            {cuaca.harian.suhuMaksimal[0]}°C
-          </Text>
+          <Button
+            title={sudahFavorit ? "Sudah di Favorit" : "Tambahkan ke Favorit"}
+            disabled={sudahFavorit}
+            onPress={() =>
+              router.push({
+                pathname: "/tambah-favorit",
+                params: {
+                  id: String(kotaTerpilih.id),
+                  nama: kotaTerpilih.name,
+                  lat: String(kotaTerpilih.latitude),
+                  lon: String(kotaTerpilih.longitude),
+                },
+              })
+            }
+          />
         </>
       )}
       {cuaca && (
