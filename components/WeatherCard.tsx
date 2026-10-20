@@ -2,6 +2,7 @@
 import { Text, View } from "react-native";
 import { spacing, typeScale } from "../constants/styles";
 import { TingkatAQI, WeatherCardProps } from "../types/cuaca";
+import { useTheme } from "../hooks/use-theme";
 const warnaPerTingkat: Record<TingkatAQI, string> = {
   BAIK: "green",
   SEDANG: "goldenrod",
@@ -30,7 +31,7 @@ ${tingkatAQI}`
       style={{
         padding: spacing.sedang,
         borderRadius: 8,
-        backgroundColor: "#F4F7FA",
+        backgroundColor: useTheme().colors.card,
       }}
     >
       <Text style={{ fontWeight: "bold", fontSize: typeScale.judul }}>
